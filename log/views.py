@@ -10,7 +10,7 @@ def save_log(request):
     status = {'status': "failure"}
     if request.method == 'POST':
         try:
-            input = json.load(request.body)
+            input = json.loads(request.body)
             w_id = input['w']
             log_items = input['logs']
             for log_item in log_items:
