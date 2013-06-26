@@ -1,6 +1,12 @@
 # Django settings for eduride project.
 import os
 
+## [changed] passphrase for the resources module in referring moodle
+# todo make a lookup base on  domain name
+MOODLE_PASS = "DMf05JLJDtW8SSbeQfSn"
+
+SITE_URL = "http://eduride.berkeley.edu/"
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 PROJECT_ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -31,7 +37,7 @@ ALLOWED_HOSTS = []
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
-TIME_ZONE = 'America/Chicago'
+TIME_ZONE = 'America/Los_Angeles'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html

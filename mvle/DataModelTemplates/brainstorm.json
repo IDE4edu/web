@@ -1,0 +1,32 @@
+{
+   "assessmentItem": {
+      "adaptive": false,
+      "identifier": "Brainstorm",
+      "interaction": {
+         "expectedLines": "5",
+         "prompt": "<p><strong><span style=\"font-family: verdana, geneva; font-size: medium;\">What are some questions about the shape of Earth's orbit that you hope using the visualization will help you to answer? Write your questions below.</span></strong></p>\n<p><strong><span style=\"font-family: verdana, geneva; font-size: medium;\">After saving your response, you can click on CHECK FOR NEW RESPONSES to see the questions your classmates submitted.</span></strong></p>",
+         "responseIdentifier": "Brainstorm"
+      },
+      "timeDependent": false
+   },
+   "cannedResponses": [
+      {
+         "identifier": "qXkIvunlq2",
+         "name": "Mary",
+         "response": "I'm not sure"
+      }
+   ],
+   "displayName": "1",
+   "isGated": true,
+   "isInstantPollActive": false,
+   "isPollEnded": false,
+   "isAllowStudentReply":false,
+   "isRichTextEditorAllowed": false,
+   "starterSentence": {
+      "display": "0",
+      "sentence": ""
+   },
+   "title": "Brainstorm Title",
+   "type": "Brainstorm",
+   "useServer": true
+}

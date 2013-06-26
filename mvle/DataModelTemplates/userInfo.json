@@ -1,0 +1,33 @@
+{"myUserInfo":
+	{
+	"periodId": "122578",
+	"periodName": "s1",
+	"userName": "Joe X",
+	"workgroupId": 111723,
+	"myClassInfo": 
+		{
+		 "classmateUserInfos": 
+		    [
+			  {
+				"periodId": 122578,
+				"periodName": "s1",
+				"studentIds": "125",
+				"userName": "Charlie Y",
+				"workgroupId": 111773
+				},
+			  {
+				"periodId": 122578,
+				"periodName": "s1",
+				"studentIds": "126",
+				"userName": "Mary Z",
+				"workgroupId": 111774
+				}
+			 ],
+		 "sharedTeacherUserInfos": [],
+		 "teacherUserInfo": {
+			"userName": "Mike Clancy", 
+			"workgroupId": "111722"
+		 	}
+		 }
+	}
+}
