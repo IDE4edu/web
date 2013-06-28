@@ -196,6 +196,8 @@ def getUserInfo(userId):
     if (user.teacherId):
         teacherUserInfo = makeTeacherInfoDict(user.teacherId.userId, 
                                               user.teacherId.userName)
+    else:
+        teacherUserInfo = {}
     periodId = user.periodId
     classmates = models.Bs_User.objects.filter(periodId=periodId)
     classmateUserInfos = list()
