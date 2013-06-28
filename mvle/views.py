@@ -173,6 +173,8 @@ def getStudentWork(nodeId, userId):
     #  (in actuality, just get the latest one)
     nodeId = validate_int(nodeId)
     userId = validate_int(userId)
+    if (userId == 0):
+        return simplejson.dumps([])
     try:
         states = models.Bs_State.objects.filter(userId=userId).filter(nodeId=nodeId)
         state = states[states.count() - 1]
