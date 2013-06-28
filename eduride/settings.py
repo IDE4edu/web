@@ -5,7 +5,8 @@ import os
 # todo make a lookup base on  domain name
 MOODLE_PASS = "DMf05JLJDtW8SSbeQfSn"
 
-SITE_URL = "http://eduride.berkeley.edu/"
+#SITE_URL = "http://eduride.berkeley.edu/"
+SITE_URL = "/"
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG

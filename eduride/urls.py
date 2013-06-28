@@ -22,7 +22,7 @@ urlpatterns = patterns('',
     url(r'^w/', include('website.urls')),
     url(r'^log/$', 'log.views.save_log'),
     url(r'^auth/', include('auth.urls')),
-    
+
     #######
     ## MVLE
     
@@ -42,7 +42,6 @@ urlpatterns = patterns('',
     url(r'^mvle/bs/(?P<nodeId>\d+)/getStudentData/$', 'mvle.views.bs_getStudentData'),
     url(r'^mvle/bs/(?P<nodeId>\d+)/pushStudentVisit/$', 'mvle.views.bs_pushStudentVisit'),
     url(r'^mvle/bs/(?P<nodeId>\d+)/pushStudentState/$', 'mvle.views.bs_pushStudentState'),
-    
     
 
     

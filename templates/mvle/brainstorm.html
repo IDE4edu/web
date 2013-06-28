@@ -67,6 +67,7 @@ extends 'mvle/base.html'
 	$(document).ready(function() {
 		var bs = new NODE();
 		bs.setNodeId('content_nodeId');
+		bs.currentNodeVisit = new NODE_VISIT(bs.id, "brainstorm");
 		bs.setUserId('userId');
 		bs.setGetStudentDataURL('getStudentDataURL');
 		bs.setPushStudentVisitsURL('pushStudentVisitsURL');

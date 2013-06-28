@@ -14,8 +14,9 @@ function BRAINSTORM(node){
 	this.recentResponses = new Array();
 	this.subscribed = false;
 
-	if(node.studentWork != null && node.studentWork != "") {
-		this.states = node.studentWork; 
+	if(node.studentWork != null && node.studentWork != "" && node.studentWork != "[]") {
+		// NATE student work is just one, now
+		this.states.push(JSON.parse(node.studentWork)); 
 	} else {
 		this.states = [];  
 	};
@@ -55,7 +56,8 @@ BRAINSTORM.prototype.brainfullLoaded = function(frameDoc) {
 
 	//post the current node visit to the db without an end time
 	if (this.state) {
-		this.node.view.postCurrentNodeVisit(this.processPostSuccessResponse,this.processPostFailureResponse,{});
+		// NATE LAUGHS AT YOUR PITIFUL ATTEMPTS -- done outside brainstorm-page
+		//this.node.view.postCurrentNodeVisit(this.processPostSuccessResponse,this.processPostFailureResponse,{});
 	}
 	this.recentResponses = new Array();
 	var parent = frameDoc.getElementById('main');
@@ -151,18 +153,18 @@ BRAINSTORM.prototype.brainfullLoaded = function(frameDoc) {
 BRAINSTORM.prototype.showClassmateResponses = function(frameDoc) {
 
 	//make the request to get posts made by class mates and then display those posts
-	this.node.view.connectionManager.request('GET', 2, this.node.view.config.getConfigParam('getStudentDataUrl'), {
+	this.node.view.connectionManager.request('GET', 2, this.node.getStudentDataURL, {
 		type : 'brainstorm',
 		periodId : this.node.view.userAndClassInfo.getPeriodId(),
 		inOrder : true,
 		userId : this.node.view.userAndClassInfo.getWorkgroupId() + ":" + this.node.view.userAndClassInfo.getClassmateIdsByPeriodId(this.node.view.userAndClassInfo.getPeriodId()),
-		runId : this.node.view.config.getConfigParam('runId'),
-		nodeId : this.node.getNodeId()
+		//runId : this.node.view.config.getConfigParam('runId'),
+		nodeId : this.node.nodeId
 	}, getClassmateResponsesCallback, {
-		frameDoc : frameDoc,
+		frameDoc : document,
 		recentResponses : this.recentResponses,
 		content : this.content,
-		vle : this.node.view,
+		vle : this.node.view,    //we send the view instead, woot!
 		bs : this
 	});
 
@@ -206,72 +208,34 @@ function sortByTimestamp(object1, object2) {
  * @param responseXML the response xml from the async request
  * @param handlerArgs the extra arguments used by this function
  */
+
+// NATE SCREWED THIS ALL AROUND, YES  (in his defense, it was only after being screwed with by it)
+// just returns all states with userId/nodeId we need -- screw the 'visits'
 function getClassmateResponsesCallback(responseText, responseXML, handlerArgs) {
 	var bs = handlerArgs.bs;
 	if(responseText) {
 		//the responseText should be json
 
 		//parse the json
-		visits = $.parseJSON(responseText);
+		states = JSON.parse(responseText);
 
 		//used for adding responses to the student UI
 		var frameDoc = handlerArgs.frameDoc;
 		var responsesParent = frameDoc.getElementById('responses');
 
-		/*
-		 * the array that holds objects that represent a response. the
-		 * object contains a userId, responseText, timestamp 
-		 */
 		var responseStates = new Array();
-		/*
-		 * the array that holds objects that represents a reply. the object ontains a
-		 * userId, reponseText, timestamp
-		 */
 		var replyStates = new Array();
 
-		//loop through the visits
-		for(var x=0; x<visits.length; x++) {
-			//obtain a visit
-			var visitObj = visits[x];
+		//loop through the states
+		for (var x = 0; x < states.length; x++) {
+			var state = JSON.parse(states[x]);
 
-			//create a node visit object from the json data
-			var nodeVisitObj = NODE_VISIT.prototype.parseDataJSONObj(visitObj.data, handlerArgs.vle);
-
-			//set the id of the node visit object
-			nodeVisitObj.id = visitObj.stepWorkId;
-
-			//obtain the userId
-			var userId = visitObj.userId;
-
-			//loop through the states in the visit
-			for(var y=0; y<nodeVisitObj.nodeStates.length; y++) {
-				//obtain a state
-				var nodeState = nodeVisitObj.nodeStates[y];
-				nodeState.nodeVisitId = nodeVisitObj.id;  // add the nodevisitId in there
-				nodeState.userId = userId;
-
-				if (nodeState.postType != null && nodeState.postType == "reply") {
-					// this state represents a reply to a post
-					replyStates.push(nodeState);
-				} else {
-					// this state is an original post (first-level)
-					responseStates.push(nodeState);
-				}
-				/*
-				 * create an object that will contain the userId, responseText,
-				 * and timestamp
-				 */ 
-				/*
-				var responseState = new Object();
-				responseState.userId = userId;
-				responseState.responseText = nodeState.getStudentWork().response;
-				responseState.timestamp = nodeState.timestamp;
-				responseState.nodeVisitId = nodeVisitObj.id;
-
-
-				//add the responseState object to the array
-				responseStates.push(responseState);
-				 */
+			// DAMN THAT NATE GUY
+			if (state.postType != null && state.postType == "reply") {
+				replyStates.push(state);
+			} else {
+				// it should be "new"
+				responseStates.push(state);
 			}
 		}
 
@@ -300,61 +264,9 @@ function getClassmateResponsesCallback(responseText, responseXML, handlerArgs) {
 
 
 	} else {
-		/*
-		 * obtain the frameDoc from the handlerArgs. the frameDoc is the
-		 * dom object for the brainstorm html interface
-		 */
-		var frameDoc = handlerArgs.frameDoc;
 
-		/*
-		 * retrieve the response(s) the student has posted during this current
-		 * node visit
-		 */ 
-		var recentResponses = handlerArgs.recentResponses;
-
-		//the student's vle
-		var vle = handlerArgs.vle;
-
-		//obtain the dom object that holds all the responses
-		var responsesParent = frameDoc.getElementById('responses');
-
-
-		/// THIS WILL NEVER BE HIT -- responseXML is empty if responseText is empty
-		/*
-		 * node_visits are wrapped in a workgroup tag, the same workgroup may show
-		 * up multiple times in the xml if that workgroup posted multiple times
-		 */
-		var workgroups = responseXML.getElementsByTagName("workgroup");
-		//loop through all the workgroups
-		for(var x=0; x<workgroups.length; x++) {
-			//obtain the userId (same as workgroupId)
-			var userId = workgroups[x].attributes.getNamedItem("userId").nodeValue;
-
-			//the data is the node state xml text
-			var data = workgroups[x].getElementsByTagName("data")[0];
-			if(data != null && data != "") {
-				/*
-				 * obtain all the responses from the node state data. each node
-				 * state can have multiple response tags if the student posted
-				 * multiple times in a single node visit
-				 */
-				var responses = data.getElementsByTagName("response");
-
-				//loop through the responses in this node visit
-				for(var y=0; y<responses.length; y++) {
-					//obtain the text the student wrote and posted
-					var postText = responses[y].firstChild.nodeValue;
-
-					var dummyState = {response:postText, userId:userId};
-					//add the posted response to the user interface
-					BRAINSTORM.prototype.addStudentResponse(dummyState, vle);
-				};
-			};
-		};
-
-		BRAINSTORM.prototype.showRecentResponses(frameDoc, recentResponses, responsesParent, vle);
-	};
-
+	BRAINSTORM.prototype.showRecentResponses(frameDoc, recentResponses, responsesParent, vle);
+	}
 };
 
 /**
@@ -400,8 +312,9 @@ BRAINSTORM.prototype.saveReply = function(replyText, replyToNodeVisitId, replyTo
 			/*
 			 * post the current node visit to the db immediately without waiting
 			 * for the student to exit the step.
-			 */	
-			this.node.view.postCurrentNodeVisit(this.processPostSuccessResponse,this.processPostFailureResponse,additionalCallbackData);
+			 */
+			// NATE HATES YOUR FREEDOMS	
+			//this.node.view.postCurrentNodeVisit(this.processPostSuccessResponse,this.processPostFailureResponse,additionalCallbackData);
 		} else {
 			for(var x=0; x<this.states.length; x++) {
 				this.addStudentResponse(this.states[x], this.node.view, this.content);
@@ -533,10 +446,8 @@ BRAINSTORM.prototype.savePost = function(frameDoc){
 			
 			// NATE KILLED THIS WITH RELUCTANCE...
 			//this.node.view.postCurrentNodeVisit(this.processPostSuccessResponse,this.processPostSuccessResponse,{"hi":"ho"});
-			this.view.MODEL.postCurrentNodeVisit(
-					this.processPostSuccessResponse, 
-					this.processPostFailResponse,
-					{})
+			//   already done at page load
+			//this.view.model.postCurrentNodeVisit(this.processPostSuccessResponse, this.processPostFailResponse,{})
 	
 			this.showClassmateResponses(frameDoc);
 		} else {
@@ -559,6 +470,8 @@ BRAINSTORM.prototype.savePost = function(frameDoc){
  * @param vle the vle of the student who is logged in
  * @param content content for this brainstorm
  */
+// NATE -- we send the view instead of the vle -- it has the userInfo 
+//   and, changed the locations of tinymce stuff
 BRAINSTORM.prototype.addStudentResponse = function(state, vle, content) {
 	//obtain the dom object that holds all the responses
 	var responsesParent = $('#responses');

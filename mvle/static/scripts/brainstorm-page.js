@@ -17,14 +17,16 @@ function loadContentAfterScriptsLoad(node) {
 
 	brainstorm = new BRAINSTORM(node);
 	brainstorm.brainfullLoaded(document);
+	
+	// nate added
+	node.view.model.postCurrentNodeVisit();
 };
 
 /*
-function loadContent(node) {
-	scriptloader.loadScripts('brainstorm', node.contentPanel.window.document, node.id, eventManager);
-};
-*/
-
+ function loadContent(node) {
+ scriptloader.loadScripts('brainstorm', node.contentPanel.window.document, node.id, eventManager);
+ };
+ */
 
 function save() {
 	brainstorm.savePost(document);
@@ -38,34 +40,33 @@ function refreshResponses() {
 	brainstorm.refreshResponses(document);
 };
 
-
-
 /////////////////////////////////////
 //// brainstorm additions for eduride
 
-		// NODE needs: 
-		//   id   (nodeId)
-		//   userId
-		//   content
-		//   student work: array of BrainstormState (htmlstring)
-		//   view
-		//   getStudentDataURL, pushStudentStateURL, pushStudentVisitsURL
-		// VIEW:
-		//    connectionManager.request(), 
-		//    userAndClassInfo:  (view.getUserAndClassInfo(), vle.getUserAndClassInfo(), view.userAndClassInfo.)
-		//		getWorkGroupID()
-		//		getPeriodId()
-		//		getClassmateIdsByPeriodId(periodId)   -> string of workgroupIDs
-		//      getUserNameByUserId(userID -- from state)
-		//       (this stuff also in vle.)
-		//    pushStudentWork()
-		//    postCurrentNodeVisit()
-		//    MODEL
-		// CONTENT:  (also in brainstorm.content)
-		// MODEL:
-		//    pushStudentWorkToLatestNodeVisit ( nodeId, BRAINSTORMSTATE)
-		
-		// tiny_mce script urls and images and shit -- two different places
+// NODE needs:
+//   id   (nodeId)
+//   userId
+//   content
+//   student work: array of BrainstormState (htmlstring)
+//   view
+//   getStudentDataURL, pushStudentStateURL, pushStudentVisitsURL
+//   currentNodeVisit
+// VIEW:
+//    connectionManager.request(),
+//    userAndClassInfo:  (view.getUserAndClassInfo(), vle.getUserAndClassInfo(), view.userAndClassInfo.)
+//		getWorkGroupID()
+//		getPeriodId()
+//		getClassmateIdsByPeriodId(periodId)   -> string of workgroupIDs
+//      getUserNameByUserId(userID -- from state)
+//       (this stuff also in vle.)
+//    pushStudentWork()
+//    postCurrentNodeVisit()
+//    MODEL
+// CONTENT:  (also in brainstorm.content)
+// MODEL:
+//    pushStudentWorkToLatestNodeVisit ( nodeId, BRAINSTORMSTATE)
+
+// tiny_mce script urls and images and shit -- two different places
 
 // event manager
 var eventManager = new EventManager(false);
@@ -79,50 +80,52 @@ UserInfoContentObject.prototype.getContentJSON = function() {
 	return this.json;
 };
 
-
-
 // model  -- handles data movement
 function MODEL(node) {
 	this.node = node;
 }
 
-MODEL.prototype.pushStudentWorkToLatestNodeVisit =  function(thisNodeId, bsState)  {
+MODEL.prototype.pushStudentWorkToLatestNodeVisit = function(thisNodeId, bsState) {
+	// these two are needed for display 
+	bsState.nodeVisitId = thisNodeId;
+	bsState.userId = this.node.userId;
 	this.node.view.connectionManager.request('POST', 2, this.node.pushStudentStateURL, {
 		type : 'BS',
 		userId : this.node.userId,
 		nodeId : thisNodeId,
-		json : bsState
+		json : encodeURIComponent(JSON.stringify(bsState))
 	});
 
 };
 
-// based on View.prototype.postCurrentNodeVisit
+// based on View.prototype.postCurrentNodeVisit, used instead of it
 MODEL.prototype.postCurrentNodeVisit = function(successCallback, failureCallback, additionalData) {
-	// get current node visit
+	var currentNodeVisit = this.node.currentNodeVisit;
 	var stepWorkId = this.node.nodeId;
 	var url = this.node.pushStudentVisitsURL;
-	var json = "";  // get json version of current node visit
-	var uaci = this.node.view.userAndClassInfo;
-	
-	this.node.view.connectionManager.request('POST', 3, url, 
-				{id: stepWorkId, 
-				//runId: this.getConfig().getConfigParam('runId'), 
-				userId: this.getUserAndClassInfo().getWorkgroupId(), 
-				data: nodeVisitData
-					}, 
-					this.processPostResponse, 
-					{vle: this, 
-					 nodeVisit:currentNodeVisit, 
-					 successCallback:successCallback,
-					 failureCallback:failureCallback,
-					 additionalData:additionalData},
-					this.processPostFailResponse);
+	var json = encodeURIComponent(JSON.stringify(currentNodeVisit));
+	// get json version of current node visit
+	var uaci = this.node.view.getUserAndClassInfo();
+
+	this.node.view.connectionManager.request('POST', 3, url, {
+		nodeId : stepWorkId,
+		//runId: this.getConfig().getConfigParam('runId'),
+		userId_fromClass : uaci.getWorkgroupId(),
+		visitStartTime: currentNodeVisit.visitStartTime,
+		visitEndTime: currentNodeVisit.visitEndTime,
+		type: "BS",
+		periodId : uaci.getPeriodId(),
+		userId : this.node.userId,
+		json : json
+	}, this.processPostResponse, {
+		vle : this,
+		nodeVisit : currentNodeVisit,
+		successCallback : successCallback,
+		failureCallback : failureCallback,
+		additionalData : additionalData
+	}, this.processPostFailResponse);
 
 };
-
-
-
-
 
 // NODE
 
@@ -169,10 +172,8 @@ NODE.prototype.setPushStudentStateURL = function(id_htmlid) {
 	this.pushStudentStateURL = val;
 };
 
-
 NODE.prototype.setUserInfo = function(userInfoJson) {
 	var contentJson = new UserInfoContentObject(userInfoJson)
 	this.view.loadUserAndClassInfo(contentJson);
 };
-
 

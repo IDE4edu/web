@@ -1,5 +1,5 @@
 # Create your views here.
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 from django.utils import simplejson
 from django.shortcuts import render_to_response
 from django.views.decorators.csrf import csrf_exempt
@@ -8,7 +8,7 @@ from mvle import models
 import md5
 import os
 
-
+from django.core import serializers 
 
 
 
@@ -57,23 +57,90 @@ def process_unknown_type(request):
 
 
 
-## returns responses from other students for this nodeID in this group
+## returns brainstormstate from this nodeId for users passed in (in this periodId)
+# params
+#  inOrder -- always true, so earliest should come first!
+#  nodeId
+#  periodId
+#  type  -- 'brainstorm
+#  userId   colon separated, first one is user, other ones are classmates.
 @csrf_exempt
 def bs_getStudentData(request, nodeId):
-    # get userId and section, yo, then pull nodeVisits for that group
-    return ""
+    R_nodeId = validate_int(request.REQUEST.get('nodeId'),0)
+    R_periodId = validate_int(request.REQUEST.get('periodId'), 0)
+    userIdString = request.REQUEST.get('userId')
+    userIds = map(validate_int, userIdString.split(':'))
+
+    if (validate_int(nodeId,0) != R_nodeId) :
+        return error_response("I'm broke real bad, Pa -- nodeIds conflict: " + str(validate_int(nodeId,0)) + ":" + str(R_nodeId))
+    
+    userId = userIds[0]
+    # could use userId and periodId to find foreign key visits, rather than userIdList
+    states = models.Bs_State.objects.filter(nodeId=nodeId, userId__in=userIds)
+
+    out = list()
+    for state in states:
+        out.append(state.json)
+        
+    return HttpResponse(simplejson.dumps(out), "application/json")
 
 
-# gets a json array of nodeVisits, or nodeState? huh
+# only one visit for a given userId/nodeId/startTime? combo ... ?   hm.
+# gets params
+#  nodeId, 
+#  userId, (gotten from request, or normal way)
+#  userId_fromClass (gotten from classInfo stuff)
+#  type (= BS)
+#  json (node visit json)
+#  visitStartTime: an int
+#  visitEndTiem: probably null
 @csrf_exempt
 def bs_pushStudentVisit(request, nodeId):
-    return HttpResponse(simplejson.dumps(request),"application/json")
+    vdata = {}
+    vdata['nodeId'] = validate_int(nodeId,0)
+    vdata['userId'] = validate_int(request.REQUEST.get('userId'),0)
+    R_userId_FromClass = validate_int(request.REQUEST.get('userId_fromClass'),0)
+    R_nodeId = validate_int(request.REQUEST.get('nodeId'),0)
+    vdata['periodId'] = validate_int(request.REQUEST.get('periodId'), 0)
+    vdata['type'] = "brainstorm"
+    vdata['visitStartTime'] = validate_int(request.REQUEST.get('visitStartTime')) 
+    vdata['visitEndTime'] = validate_int(request.REQUEST.get('visitEndTime'),0)
+    vdata['json'] = request.REQUEST.get('json', None)
+    
+    if (vdata['nodeId'] != R_nodeId) :
+        return error_response("I'm broke real bad, Pa -- nodeIds conflict: " + str(vdata['nodeId']) + ":" + str(R_nodeId))
+    if (vdata['userId'] != R_userId_FromClass):
+        return error_response("I'm broke real bad, Pa -- userIds conflict: " + str(vdata['userId'])  + ":" + str(R_userId_FromClass))
+    #return HttpResponse(simplejson.dumps(vdata), "application/json")
+
+    v = models.Visit(**vdata)
+    v.save();
+    return HttpResponse("visit post successful, id: " + str(v.id),"application/json")
 
 
 # gets a json array of nodeVisits, or nodeState? huh
 @csrf_exempt
 def bs_pushStudentState(request, nodeId):
-    return HttpResponse(simplejson.dumps(request),"application/json")
+    sdata = {}
+    vdata = {}
+    sdata['nodeId'] = validate_int(nodeId, 0)
+    vdata['nodeId'] = sdata['nodeId']
+    sdata['userId'] = validate_int(request.REQUEST.get('userId'), 0)
+    vdata['userId'] = sdata['userId']
+    R_nodeId = validate_int(request.REQUEST.get('nodeId'),0)
+    sdata['json'] = request.REQUEST.get('json')
+    
+    if (sdata['nodeId'] != R_nodeId) :
+        return error_response("I'm in a bad state, Pa -- nodeIds conflict: " + str(vdata['nodeId']) + ":" + str(R_nodeId))
+
+    # get the visit with the latest start time...  could have the id, that'd be easier, yo
+    v = models.Visit.objects.filter(**vdata).latest('visitStartTime')
+    sdata['visit'] = v;
+    
+    s = models.Bs_State(**sdata)
+    s.save()
+
+    return HttpResponse("state post successful, id: " + str(s.id), "application/json")
 
 
 
@@ -100,45 +167,71 @@ def getBrainstormContent(nodeId):
 
 
 def getStudentWork(nodeId, userId):
-    # an array of BrainstormState json objects
-    studentWork_db="[]"
-    
-    #testing
-    if userId == 1 :
-        studentWork_db=simplejson.dumps([])
-                
-    studentWork = simplejson.loads(studentWork_db)
-    return simplejson.dumps(studentWork)
+    # a single BrainstormState json objects with userId/nodeId
+    #  (in actuality, just get the latest one)
+    nodeId = validate_int(nodeId)
+    userId = validate_int(userId)
+    try:
+        states = models.Bs_State.objects.filter(userId=userId).filter(nodeId=nodeId)
+        state = states[states.count() - 1]
+    except:
+        return simplejson.dumps([])
+    return simplejson.dumps(state.json)
 
 
 
 # probably need a runId here at some point, eh?  Right now, just based on userId we are
 # going to be able to determine classmate ids in this students group, names, etc.
 def getUserInfo(userId):
-    # some crazy ass json structure that Wise4 demands
-    userInfo_db = ""
+    userId=validate_int(userId)
+    user = models.Bs_User.objects.get(userId=userId)
+    # gotta make some crazy ass json structure that Wise4 demands - see DataModelTemplate/userInfo.json
     
-    #testing
-    if userId==1:
-        dirname = os.path.dirname(__file__)
-        with open(os.path.join(dirname, 'DataModelTemplates', 'userInfo.json'), 'rb') as f:
-            userInfo_db = f.read()
-    
-    userInfo = simplejson.loads(userInfo_db)
-    return simplejson.dumps(userInfo)
+    myUserInfo = makeUserInfoDict(userId=user.userId, 
+                                  userName=user.userName,
+                                  periodId=user.periodId,
+                                  periodName=user.periodName,
+                                  studentIdentifier=user.studentIdentifier,
+                                  )
+    if (user.teacherId):
+        teacherUserInfo = makeTeacherInfoDict(user.teacherId.userId, 
+                                              user.teacherId.userName)
+    periodId = user.periodId
+    classmates = models.Bs_User.objects.filter(periodId=periodId)
+    classmateUserInfos = list()
+    sharedTeacherUserInfos = list()
+    for classmate in classmates:
+        if (classmate.TA):
+            sharedTeacherUserInfos.append(makeTeacherInfoDict(userId=classmate.userId,
+                                                              userName=classmate.userName,
+                                                              ))
+        else:
+            classmateUserInfos.append(makeUserInfoDict(userId=classmate.userId,
+                                                       userName=classmate.userName,
+                                                       periodId=classmate.periodId,
+                                                       periodName=classmate.periodName,
+                                                       studentIdentifier=classmate.studentIdentifier,
+                                                       ))
+    myClassInfo = {'classmateUserInfos':classmateUserInfos,
+                   'sharedTeacherUserInfos':sharedTeacherUserInfos,
+                   'teacherUserInfo':teacherUserInfo,
+                   }
+    myUserInfo['myClassInfo']=myClassInfo
+    result = {'myUserInfo':myUserInfo}
+    return simplejson.dumps(result)
 
 
 
 def bs_getStudentDataURL(nodeId):
-    url = settings.SITE_URL + "mlve/bs/" + nodeId + "/getStudentData/"
+    url = settings.SITE_URL + "mvle/bs/" + nodeId + "/getStudentData/"
     return url
 
 def bs_pushStudentVisitsURL(nodeId):
-    url = settings.SITE_URL + "mlve/bs/" + nodeId + "/pushStudentVisit/"
+    url = settings.SITE_URL + "mvle/bs/" + nodeId + "/pushStudentVisit/"
     return url
 
 def bs_pushStudentStateURL(nodeId):
-    url = settings.SITE_URL + "mlve/bs/" + nodeId + "/pushStudentState/"
+    url = settings.SITE_URL + "mvle/bs/" + nodeId + "/pushStudentState/"
     return url
 
 
@@ -170,6 +263,19 @@ def getUserIdentifier(userId):
     return ""
 
 
+def makeUserInfoDict(userId, userName, periodId, periodName, studentIdentifier):
+    result = {'workgroupId':userId,
+              'userName':userName,
+              'periodId':periodId,
+              'periodName':periodName,
+              'studentIds':studentIdentifier,
+              }
+    return result
+
+def makeTeacherInfoDict(userId, userName):
+    result = {'workgroupId':userId, 'userName':userName}
+    return result
+
 
 # util
 
@@ -181,6 +287,14 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+def validate_int(input, return_on_error=None):
+    try:
+         value = int(input)
+    except:
+        return return_on_error
+    return value
+
+
 def error_response(msg):
-    return HttpResponse("Yoiks: " + msg)
+    return HttpResponseNotFound(msg)
     

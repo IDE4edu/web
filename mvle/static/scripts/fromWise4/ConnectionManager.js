@@ -171,7 +171,9 @@ Connection.prototype.success = function(data, status, request) {
 	} else if (this.handler) {
 		this.handler(data, data, this.hArgs);
 	}
-	view.sessionManager.maintainConnection();  // update last connection time to maintain connection
+	
+	//NATE DID THIS
+	//view.sessionManager.maintainConnection();  // update last connection time to maintain connection
 };
 
 Connection.prototype.failure = function(request, status, exception) {
