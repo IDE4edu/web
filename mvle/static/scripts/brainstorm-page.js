@@ -19,6 +19,9 @@ function loadContentAfterScriptsLoad(node) {
 	brainstorm.brainfullLoaded(document);
 	
 	// nate added
+	$('#brain_title .actual_brain_title').html(node.content.title);
+	$('#brain_title .brain_username').html("("+node.view.getUserAndClassInfo().getUserNameByUserId(node.userId)+")");
+	$('#brain_title .brain_username').show();
 	node.view.model.postCurrentNodeVisit();
 };
 

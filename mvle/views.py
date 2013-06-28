@@ -35,7 +35,9 @@ def process_bs(request, nodeId=0):
         return error_response("Bad brainstorm content (" + str(nodeId) + ")")
     
     userId = getUserId(request, 0)
-    if userId != 0 :
+    # 0 is "anonymous" in the DB, lets allow it
+    # will be None is 0 not in database!
+    if (userId is not None) :
         return render_to_response('mvle/brainstorm.html', 
                               {'nodeId': nodeId, 
                                'userId': userId,
@@ -47,8 +49,8 @@ def process_bs(request, nodeId=0):
                                'userInfo': getUserInfo(userId)
                                })
     else :
-        # unknown user?  should do brainlite.html here maybe
-        return error_response("Who are you?  Check with your teacher, please; they know these things.")
+        # userId 0 doesn't exist in db, yo -- make 'anonymous'
+        return error_response("Who are you?")
     
 
 @csrf_exempt
@@ -184,6 +186,8 @@ def getStudentWork(nodeId, userId):
 # going to be able to determine classmate ids in this students group, names, etc.
 def getUserInfo(userId):
     userId=validate_int(userId)
+    if (not(bs_user_exists(userId))):
+        return "{}";
     user = models.Bs_User.objects.get(userId=userId)
     # gotta make some crazy ass json structure that Wise4 demands - see DataModelTemplate/userInfo.json
     
@@ -239,17 +243,44 @@ def bs_pushStudentStateURL(nodeId):
 
 ## user
 
+def bs_user_exists(userId):
+    try:
+        userId = int(userId)
+        if (models.Bs_User.objects.filter(userId=userId).exists()):
+            return True
+        else:
+            return False
+    except:
+        return False
+
+
+
 def getUserId(request, default):
-    userId = int(request.REQUEST.get('z', 0))
-    code = request.REQUEST.get('c', 0)
-    Xcode = md5.new(get_client_ip(request) + settings.MOODLE_PASS).digest()
-    identifier = request.REQUEST.get('n', 0)
-    Xidentifier = getUserIdentifier(userId)
-    if ((code == Xcode) and (identifier == Xidentifier)):
+    userId = validate_int(request.REQUEST.get('z'), default)
+    if (not(bs_user_exists(userId))):
+        if (bs_user_exists(default)):
+            userId = default;
+        else:
+            return None
+    
+    # moodle inserts code to make sure server is who we think it is
+    #  MOODLE_PASS is pre-generated, and lame
+    #  ignore this for now
+    code = str(request.REQUEST.get('c', 0))
+    Xcode = str(md5.new(get_client_ip(request) + settings.MOODLE_PASS).digest())
+    
+    # also inserted by moodle; we'll require this, but it will often be empty
+    identifier = str(request.REQUEST.get('n', None))
+    Xidentifier = str(getUserIdentifier(userId))
+    if (identifier == ""):
+        identifier = None;
+    if (Xidentifier == ""):
+        Xidentifier = None;  
+    #if ((code == Xcode) and (identifier == Xidentifier)):
+    if (identifier == Xidentifier):
         return userId
     else:
-        # to change!!
-        return userId
+        return default;
 
 
 
@@ -262,7 +293,12 @@ def getUserName(userId):
 
 
 def getUserIdentifier(userId):
-    return ""
+    try:
+        user = models.Bs_User.objects.get(userId=userId)
+        return user.studentIdentifier
+    except:
+        raise Exception("here")
+        return None;
 
 
 def makeUserInfoDict(userId, userName, periodId, periodName, studentIdentifier):

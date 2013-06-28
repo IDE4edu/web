@@ -23,6 +23,10 @@ body {
 	letter-spacing: 1.6px;
 }
 
+.brain_username {
+	font-weight: normal;
+}
+
 .instructionsReminder {
 	float: right;
 	text-align: right;
