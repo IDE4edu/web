@@ -36,7 +36,7 @@ def process_bs(request, nodeId=0):
     
     userId = getUserId(request, 0)
     # 0 is "anonymous" in the DB, lets allow it
-    # will be None is 0 not in database!
+    # will be None if 0 not in database!  (in theory, sheesh)
     if (userId is not None) :
         return render_to_response('mvle/brainstorm.html', 
                               {'nodeId': nodeId, 
@@ -264,19 +264,19 @@ def getUserId(request, default):
             userId = default;
         else:
             return None
-    
+
     # moodle inserts code to make sure server is who we think it is
     #  MOODLE_PASS is pre-generated, and lame
     #  ignore this for now
     code = str(request.REQUEST.get('c', 0))
     Xcode = str(md5.new(get_client_ip(request) + settings.MOODLE_PASS).digest())
     
-    # also inserted by moodle; we'll require this, but it will often be empty
+    # also inserted by moodle; we'll require this, but it will often be empty.
     identifier = str(request.REQUEST.get('n', None))
     Xidentifier = str(getUserIdentifier(userId))
-    if (identifier == ""):
+    if (identifier == "" or identifier == 'None'):
         identifier = None;
-    if (Xidentifier == ""):
+    if (Xidentifier == "" or Xidentifier == 'None'):
         Xidentifier = None;  
     #if ((code == Xcode) and (identifier == Xidentifier)):
     if (identifier == Xidentifier):
@@ -286,20 +286,11 @@ def getUserId(request, default):
 
 
 
-def getUserName(userId):
-    if (userId == 1):
-        return "joe"
-    elif (userId == 2):
-        return "mary"
-    return "sam"
-
-
 def getUserIdentifier(userId):
     try:
         user = models.Bs_User.objects.get(userId=userId)
         return user.studentIdentifier
     except:
-        raise Exception("here")
         return None;
 
 
