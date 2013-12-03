@@ -14,10 +14,11 @@ def save_log(request):
             w_id = input['w']
             log_items = input['logs']
             for log_item in log_items:
-                verb = log_item[0] #Verb.objects.get(verb=log_item['verb'])
-                object = log_item[1]
-                time = datetime.fromtimestamp(float(log_item[2])/1000)
-                aLog = ActivityLog(subject=w_id, verb=verb, object=object, time=time)
+                action = log_item['action']
+                message = log_item['message']
+                serialized = log_item['serialized']
+                time = datetime.fromtimestamp(float(log_item['time'])/1000)
+                aLog = ActivityLog(subject=w_id, action=action, message=message, serialized=serialized, time=time)
                 aLog.save()
             
             status['status'] = "success"
