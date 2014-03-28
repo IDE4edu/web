@@ -17,7 +17,7 @@ class BlobField(models.Field):
 class ActivityLog(models.Model):
     subject = models.CharField(max_length=36)
     action = models.CharField(max_length=256) #models.ForeignKey(Verb)
-    message = TextField()
+    message = models.TextField()
     serialized = MediumBlobField()
     time = models.DateTimeField() #models.DateTimeField()
 
