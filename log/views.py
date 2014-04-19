@@ -65,6 +65,7 @@ def save_log(request):
 # FLUORITE_XML_ROOTDIR from settings.py
 
 
+#status messages must correspond with edu.berkley.eduride.fluorite.EduRideLogUploader class 
 
 @csrf_exempt
 def save_fluorite_xml(request, wsid):
