@@ -1,12 +1,22 @@
 # Django settings for eduride project.
 import os
 
+
+
+############
+## Eduride specific
+
+FLUORITE_XML_ROOTDIR = '/var/fluorite_logs/'
+
 ## [changed] passphrase for the resources module in referring moodle
 # todo make a lookup base on  domain name
 MOODLE_PASS = "DMf05JLJDtW8SSbeQfSn"
 
 #SITE_URL = "http://eduride.berkeley.edu/"
 SITE_URL = "/"
+
+
+
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -168,3 +178,7 @@ LOGGING = {
         },
     }
 }
+
+
+
+

@@ -20,6 +20,8 @@ urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
     url(r'^$', TemplateView.as_view(template_name='website/index.html')),
     url(r'^w/', include('website.urls')),
+    # catches the workspace id in this one
+    url(r'^fluorite_xml/([-0-9a-fA-F]+)/$', 'log.views.save_fluorite_xml'),
     url(r'^log/$', 'log.views.save_log'),
     url(r'^auth/', include('auth.urls')),
 
